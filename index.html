@@ -91,6 +91,14 @@
         flex-direction: column;
         align-items: center;
       }
+
+      .calculator {
+        order: 1;
+      }
+
+      .history-panel {
+        order: 2;
+      }
     }
 
     .calculator {
@@ -332,6 +340,14 @@
 </head>
 <body>
   <div class="app">
+  <aside class="history-panel">
+    <div class="history-header">
+      <h2 class="history-title">Журнал</h2>
+      <button class="history-clear" id="historyClear" type="button">Очистить</button>
+    </div>
+    <ul class="history-list" id="historyList"></ul>
+  </aside>
+
   <div class="calculator">
     <div class="calculator-header">
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Переключить тему">
@@ -369,14 +385,6 @@
       <button class="btn-equals" data-action="equals">=</button>
     </div>
   </div>
-
-  <aside class="history-panel">
-    <div class="history-header">
-      <h2 class="history-title">Журнал</h2>
-      <button class="history-clear" id="historyClear" type="button">Очистить</button>
-    </div>
-    <ul class="history-list" id="historyList"></ul>
-  </aside>
   </div>
 
   <script>
