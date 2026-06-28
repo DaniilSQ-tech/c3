@@ -32,6 +32,9 @@
       --theme-toggle-bg: #2d2d44;
       --theme-toggle-hover: #3d3d5c;
       --theme-toggle-color: #fff;
+      --history-bg: #12121a;
+      --history-border: rgba(255, 255, 255, 0.06);
+      --history-result: #e94560;
     }
 
     [data-theme="light"] {
@@ -54,6 +57,9 @@
       --theme-toggle-bg: #e2e8f0;
       --theme-toggle-hover: #cbd5e1;
       --theme-toggle-color: #1e293b;
+      --history-bg: #f0f4f8;
+      --history-border: rgba(15, 52, 96, 0.08);
+      --history-result: #e94560;
     }
 
     * {
@@ -70,6 +76,21 @@
       background: var(--bg-gradient);
       font-family: "Segoe UI", system-ui, sans-serif;
       transition: background 0.3s ease;
+      padding: 24px 16px;
+    }
+
+    .app {
+      display: flex;
+      gap: 20px;
+      align-items: stretch;
+      max-width: 100%;
+    }
+
+    @media (max-width: 680px) {
+      .app {
+        flex-direction: column;
+        align-items: center;
+      }
     }
 
     .calculator {
@@ -217,9 +238,100 @@
     .btn-zero {
       grid-column: span 2;
     }
+
+    .history-panel {
+      width: 280px;
+      background: var(--calc-bg);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--calc-shadow);
+      display: flex;
+      flex-direction: column;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    @media (max-width: 680px) {
+      .history-panel {
+        width: 320px;
+        max-height: 220px;
+      }
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+
+    .history-title {
+      color: var(--text-primary);
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .history-clear {
+      border: none;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      background: var(--btn-action-bg);
+      color: var(--text-muted);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .history-clear:hover {
+      background: var(--btn-action-hover);
+      color: var(--text-primary);
+    }
+
+    .history-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .history-list:empty::after {
+      content: "Пока нет операций";
+      display: block;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 24px 8px;
+    }
+
+    .history-item {
+      background: var(--history-bg);
+      border: 1px solid var(--history-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      transition: background 0.3s ease;
+    }
+
+    .history-item time {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 4px;
+      opacity: 0.75;
+    }
+
+    .history-item .history-result {
+      color: var(--history-result);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
+  <div class="app">
   <div class="calculator">
     <div class="calculator-header">
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Переключить тему">
@@ -258,6 +370,15 @@
     </div>
   </div>
 
+  <aside class="history-panel">
+    <div class="history-header">
+      <h2 class="history-title">Журнал</h2>
+      <button class="history-clear" id="historyClear" type="button">Очистить</button>
+    </div>
+    <ul class="history-list" id="historyList"></ul>
+  </aside>
+  </div>
+
   <script>
     const themeToggle = document.getElementById("themeToggle");
     themeToggle.addEventListener("click", () => {
@@ -269,16 +390,66 @@
 
     const displayEl = document.getElementById("display");
     const expressionEl = document.getElementById("expression");
+    const historyList = document.getElementById("historyList");
+    const historyClear = document.getElementById("historyClear");
+
+    const OP_SYMBOLS = { "+": "+", "-": "−", "*": "×", "/": "÷" };
+    const MAX_HISTORY = 50;
+    const HISTORY_KEY = "calculator-history";
 
     let currentValue = "0";
     let previousValue = "";
     let operator = null;
     let shouldResetDisplay = false;
 
+    function formatTime(date) {
+      return date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    }
+
+    function addHistoryEntry(a, op, b, result) {
+      const li = document.createElement("li");
+      li.className = "history-item";
+      const opSymbol = OP_SYMBOLS[op];
+      li.innerHTML = `<time>${formatTime(new Date())}</time>${a} ${opSymbol} ${b} = <span class="history-result">${result}</span>`;
+      historyList.prepend(li);
+      while (historyList.children.length > MAX_HISTORY) {
+        historyList.removeChild(historyList.lastChild);
+      }
+      saveHistory();
+    }
+
+    function saveHistory() {
+      const entries = [...historyList.children].map((item) => item.innerHTML);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+    }
+
+    function loadHistory() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(HISTORY_KEY));
+        if (!Array.isArray(saved)) return;
+        saved.forEach((html) => {
+          const li = document.createElement("li");
+          li.className = "history-item";
+          li.innerHTML = html;
+          historyList.appendChild(li);
+        });
+      } catch {
+        localStorage.removeItem(HISTORY_KEY);
+      }
+    }
+
+    function clearHistory() {
+      historyList.innerHTML = "";
+      localStorage.removeItem(HISTORY_KEY);
+    }
+
+    historyClear.addEventListener("click", clearHistory);
+    loadHistory();
+
     function updateDisplay() {
       displayEl.textContent = currentValue;
       if (previousValue && operator) {
-        const opSymbol = { "+": "+", "-": "−", "*": "×", "/": "÷" }[operator];
+        const opSymbol = OP_SYMBOLS[operator];
         expressionEl.textContent = `${previousValue} ${opSymbol}`;
       } else {
         expressionEl.textContent = "";
@@ -314,8 +485,10 @@
 
       const a = parseFloat(previousValue);
       const b = parseFloat(currentValue);
+      const op = operator;
 
-      if (operator === "/" && b === 0) {
+      if (op === "/" && b === 0) {
+        addHistoryEntry(previousValue, op, currentValue, "Ошибка");
         currentValue = "Ошибка";
         previousValue = "";
         operator = null;
@@ -329,9 +502,11 @@
         "-": a - b,
         "*": a * b,
         "/": a / b,
-      }[operator];
+      }[op];
 
-      currentValue = formatResult(result);
+      const formatted = formatResult(result);
+      addHistoryEntry(previousValue, op, currentValue, formatted);
+      currentValue = formatted;
       previousValue = "";
       operator = null;
       shouldResetDisplay = true;
